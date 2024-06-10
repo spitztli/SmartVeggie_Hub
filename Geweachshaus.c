@@ -33,23 +33,23 @@ void setup() {
 void loop() {
   int sensorValue = analogRead(sensorPin);
   // Umrechnen des Sensorwertes in Prozent
-  int moisturePercent = map(sensorValue, wetValue, dryValue, 100, 0);
+  int prozent = map(sensorValue, wetValue, dryValue, 100, 0);
   // Begrenzen der Prozentwerte auf 0% bis 100%
-  moisturePercent = constrain(moisturePercent, 0, 100);
+  prozent = constrain(prozent, 0, 100);
   
   int chk = DHT.read11(DHT11_PIN);
 
 
   // Ausgabe
   Serial.print("Bodenfeuchtigkeit: ");
-  Serial.print(moisturePercent);
+  Serial.print(prozent);
   Serial.println("%");
   Serial.println("Temperature = " + String(DHT.temperature) + " Grad");
   Serial.println("Humidity = " + String(DHT.humidity) + "%");
 
   LoRa.beginPacket();
-  LoRa.print("Moisture: ");
-  LoRa.print(moisturePercent);
+  LoRa.print("B-Feuchtigkeit: ");
+  LoRa.print(prozent);
   LoRa.print(", Temp: ");
   LoRa.print(DHT.temperature);
   LoRa.print(", Hum: ");
