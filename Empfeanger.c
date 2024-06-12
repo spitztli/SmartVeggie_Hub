@@ -1,3 +1,7 @@
+#include <StaticThreadController.h>
+#include <Thread.h>
+#include <ThreadController.h>
+
 #include <SPI.h>
 #include <LoRa.h>
 #include <Wire.h>
@@ -5,28 +9,73 @@
 
 const int csPin = 10;
 const int resetPin = 9;
+const int sensor = 2; // Pin für den Sensor
+int val; 
 
 LiquidCrystal_I2C lcd(0x27, 20, 4); 
 
+ThreadController controller = ThreadController();
+Thread* displayThread = new Thread();
+Thread* loraThread  = new Thread();
+
+unsigned long previousMillis = 0; 
+const long interval = 3000; 
 
 void setup() {
-lcd.init();
-lcd.backlight();
-Serial.begin(9600);
-while (!Serial);
+  pinMode(sensor, INPUT);
+  Serial.begin(9600);
 
-Serial.println("LoRa Receiver");
+  Serial.println("LoRa Receiver");
 
-LoRa.setPins(csPin, resetPin);
-  
-if (!LoRa.begin(433E6)) {
-  Serial.println("Starting LoRa failed!");
-  while (1);
-  }
+  lcd.init();
+  lcd.backlight();
 
+  displayThread->onRun(startDisplayLight);
+  displayThread->setInterval(100);
+
+  // Initialisierung von LoRa nur einmal
+  //initializeLoRa();
+
+  loraThread ->onRun(checkLoRa);
+  loraThread ->setInterval(3000);
+
+  controller.add(displayThread);
+  controller.add(loraThread );
 }
 
 void loop() {
+  controller.run();
+}
+
+
+void startDisplayLight() {
+  unsigned long currentMillis = millis();
+  val = digitalRead(sensor);
+
+  if (val) {
+    Serial.println("Display Beleuchtung an!");
+    lcd.backlight();
+    previousMillis = currentMillis; // Reset the timer
+  }
+
+  if (currentMillis - previousMillis >= interval && !val) {
+    Serial.println("Display Beleuchtung ausgeschaltet!!");
+    lcd.noBacklight(); // Turn off the backlight after the interval
+    previousMillis = currentMillis; // Reset the timer auch hier
+  }
+}
+
+
+void initializeLoRa() {
+  LoRa.setPins(csPin, resetPin);
+  if (!LoRa.begin(433E6)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+}
+
+
+void checkLoRa() {
   int packetSize = LoRa.parsePacket();
   if (packetSize) {
     String received = "";
