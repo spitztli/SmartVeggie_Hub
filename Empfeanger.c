@@ -34,7 +34,7 @@ void setup() {
   displayThread->setInterval(100);
 
   // Initialisierung von LoRa nur einmal
-  //initializeLoRa();
+  initializeLoRa();
 
   loraThread ->onRun(checkLoRa);
   loraThread ->setInterval(3000);
@@ -55,13 +55,13 @@ void startDisplayLight() {
   if (val) {
     Serial.println("Display Beleuchtung an!");
     lcd.backlight();
-    previousMillis = currentMillis; // Reset the timer
+    previousMillis = currentMillis; // Reset Time
   }
 
   if (currentMillis - previousMillis >= interval && !val) {
     Serial.println("Display Beleuchtung ausgeschaltet!!");
-    lcd.noBacklight(); // Turn off the backlight after the interval
-    previousMillis = currentMillis; // Reset the timer auch hier
+    lcd.noBacklight(); 
+    previousMillis = currentMillis; // Reset Timer
   }
 }
 
@@ -70,8 +70,10 @@ void initializeLoRa() {
   LoRa.setPins(csPin, resetPin);
   if (!LoRa.begin(433E6)) {
     Serial.println("Starting LoRa failed!");
-    while (1);
+    // Fehlerbehandlung, z.B. einen Zustand setzen, der angibt, dass LoRa nicht verfügbar ist
+    return;
   }
+  Serial.println("LoRa Initialized Successfully!");
 }
 
 
