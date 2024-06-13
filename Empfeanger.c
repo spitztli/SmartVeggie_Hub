@@ -100,6 +100,7 @@ void checkLoRa() {
       bodenfeuchtigkeit = LoRa.read();
       temperatur = LoRa.read();
       luftfeuchtigkeit = LoRa.read();
+      //Serial.println(receivedAddress);
 
       if (receivedAddress == localAdress) {
         Serial.print("Bodenfeuchtigkeit: ");
@@ -109,10 +110,14 @@ void checkLoRa() {
         Serial.print(" C, Luftfeuchtigkeit: ");
         Serial.print(luftfeuchtigkeit);
         Serial.println("%");
-      } else {
-        Serial.println("Nicht genügend Daten verfügbar");
       }
     }
+    else {
+        Serial.println("Nicht genügend Daten verfügbar");
+    }
+  }
+  else {
+    Serial.println("Keine Daten angekommen!");
   }
 }
 
