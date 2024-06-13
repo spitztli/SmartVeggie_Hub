@@ -40,18 +40,9 @@ void sendMessage() {
   LoRa.beginPacket();
   LoRa.write(bodenfeuchtigkeitMessung()); 
   LoRa.write((int)DHT.temperature);       
-  LoRa.write((int)DHT.humidity);          
-  LoRa.endPacket();                       // Schließt das Paket ab und sendet es
+  LoRa.write((int)DHT.humidity);         
+  LoRa.endPacket();                       
   Serial.println("Daten gesendet");
-
-  /*              
-  //LoRa.write(outgoing.length());        // add payload length
-  //LoRa.print(outgoing);                 // add payload
-  LoRa.endPacket();                     // finish packet and send it
-  //msgCount++;                           // increment message ID
-  Serial.println("Sending successful!");
-  Serial.println(DHT.temperature);
-  */
 }
 
 void initializeLoRa() {
@@ -71,4 +62,5 @@ int bodenfeuchtigkeitMessung() {
   // Begrenzen der Prozentwerte auf 0% bis 100%
   prozent = constrain(prozent, 0, 100);
   Serial.println(prozent);
+  return prozent;
 }
