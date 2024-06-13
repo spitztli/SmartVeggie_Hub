@@ -17,7 +17,7 @@ const int sensorPin = A0;
 const int dryValue = 512;   // Trockenheit
 const int wetValue = 253;   // Feuchtigkeit
 
-byte localAddress = 0x02;     
+int localAddress = 2342;
 byte destination = 0x01;
 
 void setup() {
@@ -38,10 +38,11 @@ void loop() {
 
 void sendMessage() {
   LoRa.beginPacket();
-  LoRa.write(bodenfeuchtigkeitMessung()); 
-  LoRa.write((int)DHT.temperature);       
-  LoRa.write((int)DHT.humidity);         
-  LoRa.endPacket();                       
+  LoRa.write((int)localAddress);
+  LoRa.write(bodenfeuchtigkeitMessung()); // Diese Funktion sollte die Bodenfeuchtigkeit als Ganzzahl zurückgeben
+  LoRa.write((int)DHT.temperature);       // Cast Temperatur zu int, vorausgesetzt, die DHT-Bibliothek gibt einen float zurück
+  LoRa.write((int)DHT.humidity);          // Cast Feuchtigkeit zu int, gleiche Annahme wie Temperatur
+  LoRa.endPacket();                       // Schließt das Paket ab und sendet es
   Serial.println("Daten gesendet");
 }
 

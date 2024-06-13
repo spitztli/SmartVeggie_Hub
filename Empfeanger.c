@@ -10,6 +10,8 @@
 const int csPin = 10;
 const int resetPin = 9;
 byte localAddress = 0x01; 
+int localAdress = 38;
+int receivedAddress;
 int bodenfeuchtigkeit;
 int temperatur;
 int luftfeuchtigkeit;
@@ -92,22 +94,24 @@ void initializeLoRa() {
 void checkLoRa() {
   int packetSize = LoRa.parsePacket();
   if (packetSize) {
-
     // Lese die Daten aus dem LoRa-Paket
-    if (LoRa.available() >= 3) {
+    if (LoRa.available() >= 4) {
+      receivedAddress = LoRa.read();
       bodenfeuchtigkeit = LoRa.read();
       temperatur = LoRa.read();
       luftfeuchtigkeit = LoRa.read();
-      
-      Serial.print("Bodenfeuchtigkeit: ");
-      Serial.print(bodenfeuchtigkeit);
-      Serial.print("%, Temp: ");
-      Serial.print(temperatur);
-      Serial.print(" C, Luftfeuchtigkeit: ");
-      Serial.print(luftfeuchtigkeit);
-      Serial.println("%");
-    } else {
-      Serial.println("Nicht genügend Daten verfügbar");
+
+      if (receivedAddress == localAdress) {
+        Serial.print("Bodenfeuchtigkeit: ");
+        Serial.print(bodenfeuchtigkeit);
+        Serial.print("%, Temp: ");
+        Serial.print(temperatur);
+        Serial.print(" C, Luftfeuchtigkeit: ");
+        Serial.print(luftfeuchtigkeit);
+        Serial.println("%");
+      } else {
+        Serial.println("Nicht genügend Daten verfügbar");
+      }
     }
   }
 }
