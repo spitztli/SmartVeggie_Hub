@@ -29,46 +29,29 @@ void setup() {
 }
 
 void loop() {
-  bodenfeuchtigkeitMessung();
   
   int chk = DHT.read11(DHT11_PIN);
 
   sendMessage();
+  delay(1000);
 }
-/*
-  // Ausgabe
-  Serial.print("Bodenfeuchtigkeit: ");
-  Serial.print(prozent);
-  Serial.println("%");
-  Serial.println("Temperature = " + String(DHT.temperature) + " Grad");
-  Serial.println("Humidity = " + String(DHT.humidity) + "%");
 
+void sendMessage() {
   LoRa.beginPacket();
-  LoRa.print("B-Feuchtigkeit: ");
-  LoRa.print(prozent);
-  LoRa.print(", Temp: ");
-  LoRa.print(DHT.temperature);
-  LoRa.print(", Hum: ");
-  LoRa.print(DHT.humidity);
-  LoRa.endPacket();
-  
-  delay(6000);
-  }
-*/
-
-void sendMessage() {                      //"String outgoing" wird noch evtl verwendet als Parameter
-  LoRa.beginPacket();                   
-  LoRa.write(destination);              
-  LoRa.write(localAddress);   
   LoRa.write(bodenfeuchtigkeitMessung()); 
-  LoRa.write(DHT.temperature);  
-  LoRa.write(DHT.humidity);           
+  LoRa.write((int)DHT.temperature);       
+  LoRa.write((int)DHT.humidity);          
+  LoRa.endPacket();                       // Schließt das Paket ab und sendet es
+  Serial.println("Daten gesendet");
+
+  /*              
   //LoRa.write(outgoing.length());        // add payload length
   //LoRa.print(outgoing);                 // add payload
   LoRa.endPacket();                     // finish packet and send it
   //msgCount++;                           // increment message ID
   Serial.println("Sending successful!");
   Serial.println(DHT.temperature);
+  */
 }
 
 void initializeLoRa() {

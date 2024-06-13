@@ -9,17 +9,20 @@
 
 const int csPin = 10;
 const int resetPin = 9;
+byte localAddress = 0x01; 
+
+
 const int sensor = 2; // Pin für den Sensor
 int val; 
 
 LiquidCrystal_I2C lcd(0x27, 20, 4); 
 
 ThreadController controller = ThreadController();
-Thread* displayThread = new Thread();
+//Thread* displayThread = new Thread();
 Thread* loraThread  = new Thread();
 
 unsigned long previousMillis = 0; 
-const long interval = 3000; 
+const long interval = 300000; 
 
 void setup() {
   pinMode(sensor, INPUT);
@@ -30,16 +33,16 @@ void setup() {
   lcd.init();
   lcd.backlight();
 
-  displayThread->onRun(startDisplayLight);
-  displayThread->setInterval(100);
+  //displayThread->onRun(startDisplayLight);
+  //displayThread->setInterval(100);
 
   // Initialisierung von LoRa nur einmal
   initializeLoRa();
 
   loraThread ->onRun(checkLoRa);
-  loraThread ->setInterval(3000);
+  loraThread ->setInterval(500);
 
-  controller.add(displayThread);
+  //controller.add(displayThread);
   controller.add(loraThread );
 }
 
@@ -76,35 +79,44 @@ void initializeLoRa() {
   Serial.println("LoRa Initialized Successfully!");
 }
 
-
 void checkLoRa() {
   int packetSize = LoRa.parsePacket();
   if (packetSize) {
-    String received = "";
-    while (LoRa.available()) {
-      received += (char)LoRa.read();
+    int bodenfeuchtigkeit;
+    int temperatur;
+    int luftfeuchtigkeit;
+
+    // Lese die Daten aus dem LoRa-Paket
+    if (LoRa.available() >= 3) {
+      bodenfeuchtigkeit = LoRa.read();
+      temperatur = LoRa.read();
+      luftfeuchtigkeit = LoRa.read();
+
+      /* Anzeige auf dem LCD
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Bodenf.: ");
+      lcd.print(bodenfeuchtigkeit);
+      lcd.print("%");
+      lcd.setCursor(0, 1);
+      lcd.print("Temp: ");
+      lcd.print(temperatur);
+      lcd.print(" C");
+      lcd.setCursor(0, 2);
+      lcd.print("Feuchtigk.: ");
+      lcd.print(luftfeuchtigkeit);
+      lcd.print("%");
+      */
+      
+      Serial.print("Bodenfeuchtigkeit: ");
+      Serial.print(bodenfeuchtigkeit);
+      Serial.print("%, Temp: ");
+      Serial.print(temperatur);
+      Serial.print(" C, Luftfeuchtigkeit: ");
+      Serial.print(luftfeuchtigkeit);
+      Serial.println("%");
+    } else {
+      Serial.println("Nicht genügend Daten verfügbar");
     }
-
-    Serial.println(received); // Ausgabe der empfangenen Daten
-
-    // Trennen der Nachricht in die einzelnen Teile
-    int firstCommaIndex = received.indexOf(',');
-    int secondCommaIndex = received.indexOf(',', firstCommaIndex + 1);
-
-    String prozent = received.substring(15, firstCommaIndex); 
-    String tempStr = received.substring(firstCommaIndex + 6, secondCommaIndex); 
-    String humStr = received.substring(secondCommaIndex + 5);
-
-    
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("B-Feuchtigkeit:");
-    lcd.print(prozent);
-    lcd.setCursor(0, 1);
-    lcd.print("Temp:");
-    lcd.print(tempStr);
-    lcd.setCursor(0, 2);
-    lcd.print("Hum:");
-    lcd.print(humStr);
   }
 }
