@@ -10,6 +10,9 @@
 const int csPin = 10;
 const int resetPin = 9;
 byte localAddress = 0x01; 
+int bodenfeuchtigkeit;
+int temperatur;
+int luftfeuchtigkeit;
 
 
 const int sensor = 2; // Pin für den Sensor
@@ -20,6 +23,8 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);
 ThreadController controller = ThreadController();
 //Thread* displayThread = new Thread();
 Thread* loraThread  = new Thread();
+Thread* updateDisplayThread = new Thread();
+
 
 unsigned long previousMillis = 0; 
 const long interval = 300000; 
@@ -42,8 +47,13 @@ void setup() {
   loraThread ->onRun(checkLoRa);
   loraThread ->setInterval(500);
 
+  updateDisplayThread ->onRun(updateDisplay);
+  updateDisplayThread ->setInterval(10000); // 10 Sekunden 
+
+
   //controller.add(displayThread);
-  controller.add(loraThread );
+  controller.add(loraThread);
+  controller.add(updateDisplayThread);
 }
 
 void loop() {
@@ -82,31 +92,12 @@ void initializeLoRa() {
 void checkLoRa() {
   int packetSize = LoRa.parsePacket();
   if (packetSize) {
-    int bodenfeuchtigkeit;
-    int temperatur;
-    int luftfeuchtigkeit;
 
     // Lese die Daten aus dem LoRa-Paket
     if (LoRa.available() >= 3) {
       bodenfeuchtigkeit = LoRa.read();
       temperatur = LoRa.read();
       luftfeuchtigkeit = LoRa.read();
-
-      /* Anzeige auf dem LCD
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("Bodenf.: ");
-      lcd.print(bodenfeuchtigkeit);
-      lcd.print("%");
-      lcd.setCursor(0, 1);
-      lcd.print("Temp: ");
-      lcd.print(temperatur);
-      lcd.print(" C");
-      lcd.setCursor(0, 2);
-      lcd.print("Feuchtigk.: ");
-      lcd.print(luftfeuchtigkeit);
-      lcd.print("%");
-      */
       
       Serial.print("Bodenfeuchtigkeit: ");
       Serial.print(bodenfeuchtigkeit);
@@ -119,4 +110,20 @@ void checkLoRa() {
       Serial.println("Nicht genügend Daten verfügbar");
     }
   }
+}
+
+void updateDisplay() {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Bodenf.: ");
+  lcd.print(bodenfeuchtigkeit);
+  lcd.print("%");
+  lcd.setCursor(0, 1);
+  lcd.print("Temp: ");
+  lcd.print(temperatur);
+  lcd.print(" C");
+  lcd.setCursor(0, 2);
+  lcd.print("Feuchtigk.: ");
+  lcd.print(luftfeuchtigkeit);
+  lcd.print("%");
 }
