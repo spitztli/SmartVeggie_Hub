@@ -9,12 +9,12 @@
 
 const int csPin = 10;
 const int resetPin = 9;
-byte localAddress = 0x01; 
 int localAdress = 38;
 int receivedAddress;
 int bodenfeuchtigkeit;
 int temperatur;
 int luftfeuchtigkeit;
+int msgCounterLoraFlower = 0;
 
 
 const int sensor = 2; // Pin für den Sensor
@@ -100,6 +100,7 @@ void checkLoRa() {
       bodenfeuchtigkeit = LoRa.read();
       temperatur = LoRa.read();
       luftfeuchtigkeit = LoRa.read();
+      msgCounterLoraFlower++;
       //Serial.println(receivedAddress);
 
       if (receivedAddress == localAdress) {
@@ -135,4 +136,24 @@ void updateDisplay() {
   lcd.print("Feuchtigk.: ");
   lcd.print(luftfeuchtigkeit);
   lcd.print("%");
+  lcd.setCursor(0, 3);
+  lcd.print(" : ");
+  lcd.print(msgCounterLoraFlower);
+}
+
+void displayNavigation (int button) {
+  int reading = button;
+  
+  Serial.println(2);
+  if (reading == HIGH) {
+    buttonState = reading;
+
+    if (buttonState == HIGH) {
+      Serial.println("test");
+      currentPage = (currentPage + 1) % totalPages;
+      displayPage(currentPage);
+    }
+  }
+  lastButtonState = reading;
+  delay(1000);
 }

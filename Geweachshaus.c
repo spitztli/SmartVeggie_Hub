@@ -44,6 +44,13 @@ void sendMessage() {
   LoRa.write((int)DHT.humidity);          // Cast Feuchtigkeit zu int, gleiche Annahme wie Temperatur
   LoRa.endPacket();                       // Schließt das Paket ab und sendet es
   Serial.println("Daten gesendet");
+  Serial.print("Bodenfeuchtigkeit: ");
+  Serial.print(bodenfeuchtigkeitMessung());
+  Serial.print("%, Temp: ");
+  Serial.print(DHT.temperature);
+  Serial.print(" C, Luftfeuchtigkeit: ");
+  Serial.print(DHT.humidity);
+  Serial.println("%");
 }
 
 void initializeLoRa() {
@@ -62,6 +69,5 @@ int bodenfeuchtigkeitMessung() {
   int prozent = map(sensorValue, wetValue, dryValue, 100, 0);
   // Begrenzen der Prozentwerte auf 0% bis 100%
   prozent = constrain(prozent, 0, 100);
-  Serial.println(prozent);
   return prozent;
 }
