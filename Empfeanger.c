@@ -16,11 +16,16 @@ int temperatur;
 int luftfeuchtigkeit;
 int msgCounterLoraFlower = 0;
 
+char* messDaten[][3];
 
+
+//wird zur Zeit nicht benötigt(Bewegungsmelder)
 const int sensor = 2; // Pin für den Sensor
 int val; 
 
 LiquidCrystal_I2C lcd(0x27, 20, 4); 
+const int buttonPin = 6;  //Button für Display navigiation 
+
 
 ThreadController controller = ThreadController();
 //Thread* displayThread = new Thread();
@@ -97,9 +102,9 @@ void checkLoRa() {
     // Lese die Daten aus dem LoRa-Paket
     if (LoRa.available() >= 4) {
       receivedAddress = LoRa.read();
-      bodenfeuchtigkeit = LoRa.read();
-      temperatur = LoRa.read();
-      luftfeuchtigkeit = LoRa.read();
+      messDaten[0][0] = LoRa.read();
+      messDaten[0][1] = LoRa.read();
+      messDaten[0][2] = LoRa.read();
       msgCounterLoraFlower++;
       //Serial.println(receivedAddress);
 
@@ -141,19 +146,25 @@ void updateDisplay() {
   lcd.print(msgCounterLoraFlower);
 }
 
-void displayNavigation (int button) {
+void navigationButton(int button) {
   int reading = button;
-  
-  Serial.println(2);
   if (reading == HIGH) {
-    buttonState = reading;
-
-    if (buttonState == HIGH) {
-      Serial.println("test");
-      currentPage = (currentPage + 1) % totalPages;
-      displayPage(currentPage);
-    }
+    Serial.println("test");
+    currentPage = (currentPage + 1) % totalPages;
+    displayPage(currentPage);
   }
   lastButtonState = reading;
   delay(1000);
+}
+
+
+void displayPage(int page) {
+  Serial.println(3);
+  lcd.clear(); 
+
+  for (int i = 0; i <= 3; i++) { 
+    lcd.setCursor(0, i); 
+    lcd.print(pages[page][i]); 
+    Serial.println(pages[page][i]); 
+  }    
 }
