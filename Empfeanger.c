@@ -2,6 +2,7 @@
 #include <Thread.h>
 #include <ThreadController.h>
 
+
 #include <SPI.h>
 #include <LoRa.h>
 #include <Wire.h>
@@ -16,46 +17,48 @@ int temperatur;
 int luftfeuchtigkeit;
 int msgCounterLoraFlower = 0;
 
-char* messDaten[][3];
+int measurementData[2][3];
+char* measurementDataName[] = {"Bodenf.: ", "Temperatur :", "Luftf. :"};
+char* measurementValue[3] = {"%", " C", "%"};
 
-
-//wird zur Zeit nicht benötigt(Bewegungsmelder)
-const int sensor = 2; // Pin für den Sensor
-int val; 
 
 LiquidCrystal_I2C lcd(0x27, 20, 4); 
-const int buttonPin = 6;  //Button für Display navigiation 
+const byte interruptPin = 3; 
+int currentPage = 0;
+int totalPages = 2;  
 
 
 ThreadController controller = ThreadController();
-//Thread* displayThread = new Thread();
 Thread* loraThread  = new Thread();
 Thread* updateDisplayThread = new Thread();
 
+unsigned long lastDebounceTime = 0;
+unsigned long debounceDelay = 10;  // Entprellzeit in Millisekunden (Button)
+bool buttonPressed = false;
 
-unsigned long previousMillis = 0; 
-const long interval = 300000; 
 
 void setup() {
-  pinMode(sensor, INPUT);
+  measurementData[1][0] = 1;
+  measurementData[1][1] = 2;
+  measurementData[1][2] = 3;
   Serial.begin(9600);
+  pinMode(interruptPin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(interruptPin), navigationButton, CHANGE);
 
+  //pinMode(sensor, INPUT);
   Serial.println("LoRa Receiver");
 
   lcd.init();
   lcd.backlight();
 
-  //displayThread->onRun(startDisplayLight);
-  //displayThread->setInterval(100);
-
   // Initialisierung von LoRa nur einmal
   initializeLoRa();
 
   loraThread ->onRun(checkLoRa);
-  loraThread ->setInterval(500);
+  loraThread ->setInterval(250);
 
   updateDisplayThread ->onRun(updateDisplay);
-  updateDisplayThread ->setInterval(10000); // 10 Sekunden 
+  updateDisplayThread ->setInterval(500); 
 
 
   //controller.add(displayThread);
@@ -66,25 +69,6 @@ void setup() {
 void loop() {
   controller.run();
 }
-
-
-void startDisplayLight() {
-  unsigned long currentMillis = millis();
-  val = digitalRead(sensor);
-
-  if (val) {
-    Serial.println("Display Beleuchtung an!");
-    lcd.backlight();
-    previousMillis = currentMillis; // Reset Time
-  }
-
-  if (currentMillis - previousMillis >= interval && !val) {
-    Serial.println("Display Beleuchtung ausgeschaltet!!");
-    lcd.noBacklight(); 
-    previousMillis = currentMillis; // Reset Timer
-  }
-}
-
 
 void initializeLoRa() {
   LoRa.setPins(csPin, resetPin);
@@ -102,19 +86,19 @@ void checkLoRa() {
     // Lese die Daten aus dem LoRa-Paket
     if (LoRa.available() >= 4) {
       receivedAddress = LoRa.read();
-      messDaten[0][0] = LoRa.read();
-      messDaten[0][1] = LoRa.read();
-      messDaten[0][2] = LoRa.read();
+      measurementData[0][0] = LoRa.read();
+      measurementData[0][1] = LoRa.read();
+      measurementData[0][2] = LoRa.read();
       msgCounterLoraFlower++;
       //Serial.println(receivedAddress);
 
       if (receivedAddress == localAdress) {
         Serial.print("Bodenfeuchtigkeit: ");
-        Serial.print(bodenfeuchtigkeit);
+        Serial.print(measurementData[0][0]);
         Serial.print("%, Temp: ");
-        Serial.print(temperatur);
+        Serial.print(measurementData[0][1]);
         Serial.print(" C, Luftfeuchtigkeit: ");
-        Serial.print(luftfeuchtigkeit);
+        Serial.print(measurementData[0][2]);
         Serial.println("%");
       }
     }
@@ -128,43 +112,36 @@ void checkLoRa() {
 }
 
 void updateDisplay() {
+  Serial.println(currentPage);
   lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Bodenf.: ");
-  lcd.print(bodenfeuchtigkeit);
-  lcd.print("%");
-  lcd.setCursor(0, 1);
-  lcd.print("Temp: ");
-  lcd.print(temperatur);
-  lcd.print(" C");
-  lcd.setCursor(0, 2);
-  lcd.print("Feuchtigk.: ");
-  lcd.print(luftfeuchtigkeit);
-  lcd.print("%");
+  for (int i = 0; i < 3; i++) { 
+    lcd.setCursor(0, i);
+    lcd.print(measurementDataName[i]); 
+    lcd.print(measurementData[currentPage][i]);
+    lcd.print(measurementValue[i]); 
+    Serial.println(measurementData[0][i]);
+    Serial.println(measurementValue[i]);
+  } 
+
   lcd.setCursor(0, 3);
-  lcd.print(" : ");
+  lcd.print("Counter Msg: ");
   lcd.print(msgCounterLoraFlower);
 }
 
-void navigationButton(int button) {
-  int reading = button;
-  if (reading == HIGH) {
-    Serial.println("test");
-    currentPage = (currentPage + 1) % totalPages;
-    displayPage(currentPage);
+void navigationButton() {
+  unsigned long currentTime = millis();
+  if ((currentTime - lastDebounceTime) > debounceDelay) {
+    int buttonState = digitalRead(interruptPin);
+    if (buttonState == LOW && !buttonPressed) {
+      // Button wurde gedrückt und vorher nicht gedrückt
+      currentPage = (currentPage + 1) % totalPages;
+      Serial.print("Interrupt ausgelöst: ");
+      Serial.println(currentPage);
+      buttonPressed = true;
+    } else if (buttonState == HIGH && buttonPressed) {
+      // Button wurde losgelassen
+      buttonPressed = false;
+    }
+    lastDebounceTime = currentTime;
   }
-  lastButtonState = reading;
-  delay(1000);
-}
-
-
-void displayPage(int page) {
-  Serial.println(3);
-  lcd.clear(); 
-
-  for (int i = 0; i <= 3; i++) { 
-    lcd.setCursor(0, i); 
-    lcd.print(pages[page][i]); 
-    Serial.println(pages[page][i]); 
-  }    
 }
