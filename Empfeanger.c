@@ -10,15 +10,18 @@
 
 const int csPin = 10;
 const int resetPin = 9;
-int localAdress = 38;
+int growStationAdress = 38;
+int weatherStationAdress = 0; // musss noch angepasst werden
 int receivedAddress;
 int bodenfeuchtigkeit;
 int temperatur;
 int luftfeuchtigkeit;
-int msgCounterLoraFlower = 0;
+int msgCounterGrowStation = 0;
+int msgCounterWeatherStation = 0;
 
 int measurementData[2][3];
-char* measurementDataName[] = {"Bodenf.: ", "Temperatur :", "Luftf. :"};
+char* measurementDataName[2][3] = {{"Bodenf.: ", "Temperatur :", "Luftf. :"}, 
+                                  {"Temperatur :", "Luftf. :", "Battery :"}}; //kontrollieren zuhause!!!!!!!!!!!!!!!
 char* measurementValue[3] = {"%", " C", "%"};
 
 
@@ -91,20 +94,33 @@ void checkLoRa() {
   int packetSize = LoRa.parsePacket();
   if (packetSize) {
     // Lese die Daten aus dem LoRa-Paket
-    if (LoRa.available() >= 4) {
+    if (LoRa.available() >= 4) {  //<--------auf 3 runter setzten
       receivedAddress = LoRa.read();
-      if (receivedAddress == localAdress) {
+      if (receivedAddress == growStationAdress) {
         measurementData[0][0] = LoRa.read();
         measurementData[0][1] = LoRa.read();
         measurementData[0][2] = LoRa.read();
-        msgCounterLoraFlower++;
-      //Serial.println(receivedAddress);
+        msgCounterGrowStation++;
+        //Serial.println(receivedAddress);
         Serial.print("Bodenfeuchtigkeit: ");
         Serial.print(measurementData[0][0]);
         Serial.print("%, Temp: ");
         Serial.print(measurementData[0][1]);
         Serial.print(" C, Luftfeuchtigkeit: ");
         Serial.print(measurementData[0][2]);
+        Serial.println("%");
+      }
+      if (receivedAddress == weatherStationAdress) {
+        measurementData[1][0] = LoRa.read();
+        measurementData[1][1] = LoRa.read();
+        measurementData[1][2] = LoRa.read();
+        msgCounterWeatherStation++;
+        Serial.print("Temp: ");
+        Serial.print(measurementData[1][0]);
+        Serial.print("C, Luftfeuchtigkeit: ");
+        Serial.print(measurementData[1][1]);
+        Serial.print(" %, Battery: ");
+        Serial.print(measurementData[1][2]);
         Serial.println("%");
       }
       else {
@@ -125,7 +141,7 @@ void updateDisplay() {
   lcd.clear();
   for (int i = 0; i < 3; i++) { 
     lcd.setCursor(0, i);
-    lcd.print(measurementDataName[i]); 
+    lcd.print(measurementDataName[currentPage][i]); //kontrollieren zuhause!!!!!!!!!!!!!!!
     lcd.print(measurementData[currentPage][i]);
     lcd.print(measurementValue[i]); 
     Serial.println(measurementData[0][i]);
@@ -134,7 +150,7 @@ void updateDisplay() {
 
   lcd.setCursor(0, 3);
   lcd.print("Counter Msg: ");
-  lcd.print(msgCounterLoraFlower);
+  lcd.print(msgCounterGrowStation);
 }
 
 void navigationButton() {

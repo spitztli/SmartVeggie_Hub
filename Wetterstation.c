@@ -10,6 +10,11 @@ dht DHT;
 const int csPin = 10;
 const int resetPin = 9;
 const int irqPin = 2;
+/*
+Verbinde SCK (Serial Clock) des RA-02 mit D13 des Arduino.
+Verbinde MISO (Master In Slave Out) des RA-02 mit D12 des Arduino.
+Verbinde MOSI (Master Out Slave In) des RA-02 mit D11 des Arduino.
+*/
 
 int localAddress = 6258;
 byte destination = 0x01;
@@ -17,9 +22,6 @@ byte destination = 0x01;
 
 void setup() {
   Serial.begin(9600);
-  delay(2000); // 2 Sekunden Verz�gerung zur Sensorstabilisierung
-
- // Initialisierung von LoRa nur einmal
   initializeLoRa();
 }
 
