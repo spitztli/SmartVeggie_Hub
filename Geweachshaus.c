@@ -70,3 +70,4 @@ int bodenfeuchtigkeitMessung() {
   prozent = constrain(prozent, 0, 100);
   return prozent;
 }
+

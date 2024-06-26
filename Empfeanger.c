@@ -11,7 +11,7 @@
 const int csPin = 10;
 const int resetPin = 9;
 int growStationAdress = 38;
-int weatherStationAdress = 0; // musss noch angepasst werden
+int weatherStationAdress = 114; // musss noch angepasst werden
 int receivedAddress;
 int bodenfeuchtigkeit;
 int temperatur;
@@ -31,7 +31,7 @@ const byte interruptLcdInitPin = 18;
 int currentPage = 0;
 int totalPages = 2;  
 unsigned long lastDebounceTime = 0;
-unsigned long debounceDelay = 10;  // Entprellzeit in Millisekunden (Button)
+unsigned long debounceDelay = 1;  // Entprellzeit in Millisekunden (Button)
 bool buttonPressed = false;
 volatile bool resetDisplayFlag = false;
 
@@ -41,9 +41,6 @@ Thread* loraThread  = new Thread();
 Thread* updateDisplayThread = new Thread();
 
 void setup() {
-  measurementData[1][0] = 1;
-  measurementData[1][1] = 2;
-  measurementData[1][2] = 3;
   Serial.begin(9600);
   pinMode(interruptPin, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(interruptPin), navigationButton, CHANGE);
@@ -94,7 +91,8 @@ void checkLoRa() {
   int packetSize = LoRa.parsePacket();
   if (packetSize) {
     // Lese die Daten aus dem LoRa-Paket
-    if (LoRa.available() >= 4) {  //<--------auf 3 runter setzten
+    if (LoRa.available() >= 4) {  
+      //Serial.print(LoRa.read());
       receivedAddress = LoRa.read();
       if (receivedAddress == growStationAdress) {
         measurementData[0][0] = LoRa.read();
@@ -122,9 +120,6 @@ void checkLoRa() {
         Serial.print(" %, Battery: ");
         Serial.print(measurementData[1][2]);
         Serial.println("%");
-      }
-      else {
-        Serial.println("Falsche Adresse!!!");
       }
     }
     else {
