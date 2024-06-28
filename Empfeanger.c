@@ -1,7 +1,6 @@
 #include <StaticThreadController.h>
 #include <Thread.h>
 #include <ThreadController.h>
-
 #include <SPI.h>
 #include <LoRa.h>
 #include <Wire.h>
@@ -10,7 +9,7 @@
 const int csPin = 10;
 const int resetPin = 9;
 int growStationAdress = 38;
-int weatherStationAdress = 114; // musss noch angepasst werden
+int weatherStationAdress = 114; 
 int receivedAddress;
 int bodenfeuchtigkeit;
 int temperatur;
@@ -20,7 +19,7 @@ int msgCounterWeatherStation = 0;
 
 int measurementData[2][3];
 char* measurementDataName[2][3] = {{"Bodenf.: ", "Temperatur :", "Luftf. :"}, 
-                                  {"Temperatur :", "Luftf. :", "Battery :"}}; //kontrollieren zuhause!!!!!!!!!!!!!!!
+                                  {"Temperatur :", "Luftf. :", "Battery :"}}; 
 char* measurementValue[2][3] = {{"%", " C", "%"}, {"C", "%", "%"}};
 
 LiquidCrystal_I2C lcd(0x27, 20, 4); 
@@ -29,7 +28,7 @@ const byte interruptLcdInitPin = 18;
 int currentPage = 0;
 int totalPages = 2;  
 unsigned long lastDebounceTime = 0;
-unsigned long debounceDelay = 200;  // Erhöhen Sie die Entprellzeit auf 50 Millisekunden
+unsigned long debounceDelay = 200;  
 volatile bool buttonPressed = false;
 volatile bool resetDisplayFlag = false;
 
@@ -38,25 +37,24 @@ Thread* periodicTaskThread = new Thread();
 
 unsigned long lastTaskTime = 0;
 bool taskRunning = false;
-const unsigned long taskInterval = 60000; // 15 minutes in milliseconds
-const unsigned long taskDuration = 30000; // 5 minutes in milliseconds
+const unsigned long taskInterval = 60000; // 15 min
+const unsigned long taskDuration = 30000; // 5 min
 
 void setup() {
   Serial.begin(9600);
   pinMode(interruptPin, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(interruptPin), navigationButtonISR, CHANGE); // Verwenden Sie FALLING, um Rauschen zu vermeiden
+  attachInterrupt(digitalPinToInterrupt(interruptPin), navigationButtonISR, CHANGE); 
   pinMode(interruptLcdInitPin, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(interruptLcdInitPin), setDisplayResetFlagISR, FALLING); // Verwenden Sie FALLING, um Rauschen zu vermeiden
+  attachInterrupt(digitalPinToInterrupt(interruptLcdInitPin), setDisplayResetFlagISR, FALLING); 
 
   lcd.init();
   lcd.backlight();
 
-  // Initialisierung von LoRa nur einmal
   Serial.println("LoRa Receiver");
   initializeLoRa();
 
   periodicTaskThread->onRun(handlePeriodicTask);
-  periodicTaskThread->setInterval(250); // Check every second
+  periodicTaskThread->setInterval(250); 
 
   controller.add(periodicTaskThread);
 }
@@ -71,12 +69,11 @@ void loop() {
     updateDisplay(); // Flag zurücksetzen
   }
 
-  // Check if button was pressed
+
   if (buttonPressed) {
-    buttonPressed = false; // Reset the flag
-    handleNavigationButton(); // Handle button press outside the ISR
-    updateDisplay(); // Immediately update the display
-  }
+    buttonPressed = false; 
+    handleNavigationButton(); 
+    updateDisplay(); 
 }
 
 void initializeLoRa() {
@@ -150,7 +147,6 @@ void updateDisplay() {
 }
 
 void navigationButtonISR() {
-  // Nur das Minimum im ISR ausführen
   buttonPressed = true;
 }
 
@@ -173,16 +169,16 @@ void handlePeriodicTask() {
   unsigned long currentMillis = millis();
 
   if (taskRunning) {
-    // Check if 5 minutes have passed since the task started
+    // Überprüfen, ob 5 Minuten seit dem Start der Aufgabe vergangen sind
     if (currentMillis - lastTaskTime >= taskDuration) {
-      // Stop the task
+      // Aufgabe stoppen
       taskRunning = false;
       Serial.println("Task stopped");
     }
   } else {
-    // Check if 15 minutes have passed since the last task started
+    // Überprüfen, ob 15 Minuten seit dem letzten Start der Aufgabe vergangen sind
     if (currentMillis - lastTaskTime >= taskInterval) {
-      // Start the task
+      // Aufgabe starten
       taskRunning = true;
       lastTaskTime = currentMillis;
       Serial.println("Task started");
