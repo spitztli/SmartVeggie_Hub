@@ -6,35 +6,39 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 
-const int csPin = 10;
-const int resetPin = 9;
-int growStationAdress = 38;
-int weatherStationAdress = 114; 
-int receivedAddress;
-int bodenfeuchtigkeit;
-int temperatur;
-int luftfeuchtigkeit;
+// Konstanten für die Pinbelegung und Adressen
+#define CS_PIN 10
+#define RESET_PIN 9
+#define GROW_STATION_ADDRESS 38
+#define WEATHER_STATION_ADDRESS 114
+#define INTERRUPT_PIN 3
+#define INTERRUPT_LCD_INIT_PIN 18
+#define LCD_ADDRESS 0x27
+
+// Messdaten Arrays und Zähler
+int measurementData[2][3];
+const char* measurementDataName[2][3] = {
+  {"Bodenf.: ", "Temperatur :", "Luftf. :"}, 
+  {"Temperatur :", "Luftf. :", "Battery :"}
+};
+const char* measurementValue[2][3] = {{"%", " C", "%"}, {"C", "%", "%"}};
 int msgCounterGrowStation = 0;
 int msgCounterWeatherStation = 0;
+int* counterList[2] = {&msgCounterGrowStation, &msgCounterWeatherStation};
 
-int measurementData[2][3];
-char* measurementDataName[2][3] = {{"Bodenf.: ", "Temperatur :", "Luftf. :"}, 
-                                  {"Temperatur :", "Luftf. :", "Battery :"}}; 
-char* measurementValue[2][3] = {{"%", " C", "%"}, {"C", "%", "%"}};
+LiquidCrystal_I2C lcd(LCD_ADDRESS, 20, 4); 
 
-LiquidCrystal_I2C lcd(0x27, 20, 4); 
-const byte interruptPin = 3; 
-const byte interruptLcdInitPin = 18;
-int currentPage = 0;
-int totalPages = 2;  
-unsigned long lastDebounceTime = 0;
-unsigned long debounceDelay = 200;  
+// Seitennavigation Variablen
 volatile bool buttonPressed = false;
 volatile bool resetDisplayFlag = false;
+int currentPage = 0;
+const int totalPages = 2;  
+unsigned long lastDebounceTime = 0;
+const unsigned long debounceDelay = 200;  
 
+// Periodische Aufgaben Variablen
 ThreadController controller = ThreadController();
 Thread* periodicTaskThread = new Thread();
-
 unsigned long lastTaskTime = 0;
 bool taskRunning = false;
 const unsigned long taskInterval = 60000; // 15 min
@@ -42,45 +46,44 @@ const unsigned long taskDuration = 30000; // 5 min
 
 void setup() {
   Serial.begin(9600);
-  pinMode(interruptPin, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(interruptPin), navigationButtonISR, CHANGE); 
-  pinMode(interruptLcdInitPin, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(interruptLcdInitPin), setDisplayResetFlagISR, FALLING); 
+  pinMode(INTERRUPT_PIN, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN), navigationButtonISR, CHANGE); 
+  pinMode(INTERRUPT_LCD_INIT_PIN, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(INTERRUPT_LCD_INIT_PIN), setDisplayResetFlagISR, FALLING); 
 
-  lcd.init();
-  lcd.backlight();
-
-  Serial.println("LoRa Receiver");
+  initializeLCD();
   initializeLoRa();
 
   periodicTaskThread->onRun(handlePeriodicTask);
   periodicTaskThread->setInterval(250); 
-
   controller.add(periodicTaskThread);
 }
 
 void loop() {
   controller.run();
   if (resetDisplayFlag) {
-    lcd.init();
-    lcd.backlight();
-    Serial.println("LCD Init im Haupt-Loop");
+    initializeLCD();
     resetDisplayFlag = false;
-    updateDisplay(); // Flag zurücksetzen
+    updateDisplay(); 
   }
-
 
   if (buttonPressed) {
     buttonPressed = false; 
     handleNavigationButton(); 
     updateDisplay(); 
+  }
+}
+
+void initializeLCD() {
+  lcd.init();
+  lcd.backlight();
+  lcd.clear();
 }
 
 void initializeLoRa() {
-  LoRa.setPins(csPin, resetPin);
+  LoRa.setPins(CS_PIN, RESET_PIN);
   if (!LoRa.begin(433E6)) {
     Serial.println("Starting LoRa failed!");
-    // Fehlerbehandlung, z.B. einen Zustand setzen, der angibt, dass LoRa nicht verfügbar ist
     return;
   }
   Serial.println("LoRa Initialized Successfully!");
@@ -89,16 +92,13 @@ void initializeLoRa() {
 void checkLoRa() {
   int packetSize = LoRa.parsePacket();
   if (packetSize) {
-    // Lese die Daten aus dem LoRa-Paket
-    if (LoRa.available() >= 4) {  
-      //Serial.print(LoRa.read());
-      receivedAddress = LoRa.read();
-      if (receivedAddress == growStationAdress) {
+    if (LoRa.available() >= 4) {
+      int receivedAddress = LoRa.read();
+      if (receivedAddress == GROW_STATION_ADDRESS) {
         measurementData[0][0] = LoRa.read();
         measurementData[0][1] = LoRa.read();
         measurementData[0][2] = LoRa.read();
-        msgCounterGrowStation++;
-        //Serial.println(receivedAddress);
+        (*counterList[0])++;
         Serial.print("Bodenfeuchtigkeit: ");
         Serial.print(measurementData[0][0]);
         Serial.print("%, Temp: ");
@@ -106,12 +106,11 @@ void checkLoRa() {
         Serial.print(" C, Luftfeuchtigkeit: ");
         Serial.print(measurementData[0][2]);
         Serial.println("%");
-      }
-      if (receivedAddress == weatherStationAdress) {
+      } else if (receivedAddress == WEATHER_STATION_ADDRESS) {
         measurementData[1][0] = LoRa.read();
         measurementData[1][1] = LoRa.read();
         measurementData[1][2] = LoRa.read();
-        msgCounterWeatherStation++;
+        (*counterList[1])++;
         Serial.print("Temp: ");
         Serial.print(measurementData[1][0]);
         Serial.print("C, Luftfeuchtigkeit: ");
@@ -120,30 +119,25 @@ void checkLoRa() {
         Serial.print(measurementData[1][2]);
         Serial.println("%");
       }
+    } else {
+      Serial.println("Nicht genügend Daten verfügbar");
     }
-    else {
-        Serial.println("Nicht genügend Daten verfügbar");
-    }
-  }
-  else {
+  } else {
     Serial.println("Keine Daten angekommen!");
   }
 }
 
 void updateDisplay() {
-  Serial.println(currentPage);
   lcd.clear();
   for (int i = 0; i < 3; i++) { 
     lcd.setCursor(0, i);
     lcd.print(measurementDataName[currentPage][i]);
     lcd.print(measurementData[currentPage][i]);
     lcd.print(measurementValue[currentPage][i]); 
-
   } 
-
   lcd.setCursor(0, 3);
   lcd.print("Counter Msg: ");
-  lcd.print(msgCounterGrowStation);
+  lcd.print(*counterList[currentPage]);
 }
 
 void navigationButtonISR() {
@@ -161,7 +155,6 @@ void handleNavigationButton() {
 }
 
 void setDisplayResetFlagISR() {
-  // Nur das Minimum im ISR ausführen
   resetDisplayFlag = true;
 }
 
@@ -169,16 +162,12 @@ void handlePeriodicTask() {
   unsigned long currentMillis = millis();
 
   if (taskRunning) {
-    // Überprüfen, ob 5 Minuten seit dem Start der Aufgabe vergangen sind
     if (currentMillis - lastTaskTime >= taskDuration) {
-      // Aufgabe stoppen
       taskRunning = false;
       Serial.println("Task stopped");
     }
   } else {
-    // Überprüfen, ob 15 Minuten seit dem letzten Start der Aufgabe vergangen sind
     if (currentMillis - lastTaskTime >= taskInterval) {
-      // Aufgabe starten
       taskRunning = true;
       lastTaskTime = currentMillis;
       Serial.println("Task started");

@@ -12,7 +12,7 @@ dht DHT;
 // LoRa
 const int csPin = 10;
 const int resetPin = 9;
-const int irqPin = 2;
+//const int irqPin = 2;
 
 // Bodenfeuchtigkeit
 const int sensorPin = A0;
@@ -23,45 +23,57 @@ const int wetValue = 253;   // Feuchtigkeit
 const int relayPinOne = 7;
 const int relayPinTwo = 6; //Reserviert 
 const int relayPinThree = 5; //Reserviert 
-unsigned long pumpRunningTime = 0; // Laufzeit der Pumpe in Millisekunden
+unsigned long pumpRunningTime = 0; // Laufzeit der Pumpe 
+unsigned long lastMoistureCheckTime = 0;
+const unsigned long moistureCheckInterval = 3600000; // 1 H
 
 // Thread
 ThreadController controller = ThreadController();
 Thread* periodicTaskThread = new Thread();
+Thread* pumpControlThread = new Thread();
+Thread* loraSendThread = new Thread();
 
 unsigned long lastTaskTime = 0;
 bool taskRunning = false;
-const unsigned long taskInterval = 900000; // 15 minutes in milliseconds
-const unsigned long taskDuration = 300000; // 5 minutes in milliseconds
+const unsigned long taskInterval = 900000; // 15 min
+const unsigned long taskDuration = 300000; // 5 min
 
 // Arduino Adresse
 int localAddress = 2342;
 
 void setup() {
   pinMode(relayPinOne, OUTPUT);  
+  pinMode(relayPinTwo, OUTPUT);  
+  pinMode(relayPinThree, OUTPUT); 
   Serial.begin(9600);
   delay(2000); // 2 Sekunden Verzögerung zur Sensorstabilisierung
   initializeLoRa();
+  
+  periodicTaskThread->onRun(handlePeriodicTask);
+  periodicTaskThread->setInterval(250); // Check every second
+
+  pumpControlThread->onRun(steuereWasserpumpe);
+  pumpControlThread->setInterval(10000); // Check every 10 seconds
+
+  loraSendThread->onRun(sendMessage);
+  loraSendThread->setInterval(taskInterval); // Send every 15 minutes
+
+  controller.add(periodicTaskThread);
+  controller.add(pumpControlThread);
+  controller.add(loraSendThread);
 }
 
 void loop() {
-  Serial.println("Test 1");
-  int chk = DHT.read11(DHT11_PIN);
-  Serial.println("Test 2");
   controller.run();
-  Serial.println("Test 3");
-  steuereWasserpumpe();
-  Serial.println("Test 4");
-  delay(1000);
 }
 
 void sendMessage() {
   LoRa.beginPacket();
   LoRa.write((int)localAddress);
   LoRa.write(bodenfeuchtigkeitMessung()); 
-  LoRa.write((int)DHT.temperature);       
+  LoRa.write((int)DHT.temperature);      
   LoRa.write((int)DHT.humidity);          
-  LoRa.endPacket();                     
+  LoRa.endPacket();                
   Serial.println("Daten gesendet");
   Serial.print("Bodenfeuchtigkeit: ");
   Serial.print(bodenfeuchtigkeitMessung());
@@ -93,27 +105,47 @@ int bodenfeuchtigkeitMessung() {
 }
 
 void steuereWasserpumpe() {
-  int feuchtigkeit = bodenfeuchtigkeitMessung();
-  Serial.println(bodenfeuchtigkeitMessung());
-  if (feuchtigkeit < 70) {
-    Serial.println("Pumpe einschalten");
-    digitalWrite(relayPinOne, HIGH);
-    unsigned long startTime = millis(); // Startzeit speichern
-    delay(2000); // Pumpe für 2 Sekunden laufen lassen
-    digitalWrite(relayPinOne, LOW);
-    Serial.println("Pumpe ausschalten"); 
-    pumpRunningTime += (millis() - startTime); // Laufzeit hinzufügen
+  unsigned long currentMillis = millis();
+  
+  if (currentMillis - lastMoistureCheckTime >= moistureCheckInterval) {
+    lastMoistureCheckTime = currentMillis; // Aktualisiere die Zeit der letzten Überprüfung
 
-    delay(1800000); // 30 Minuten warten 
-    feuchtigkeit = bodenfeuchtigkeitMessung(); 
+    int feuchtigkeit = bodenfeuchtigkeitMessung();
+    Serial.print("Bodenfeuchtigkeit: ");
+    Serial.println(feuchtigkeit);
+    Serial.print("%");
 
     if (feuchtigkeit < 70) {
-      Serial.println("Pumpe erneut einschalten");
-      digitalWrite(relayPinOne, HIGH); 
-      startTime = millis();
-      delay(2000);
+      Serial.println("Pumpe einschalten");
+      digitalWrite(relayPinOne, HIGH);
+      unsigned long startTime = millis(); // Startzeit speichern
+      
+      // Verwenden eines nicht-blockierenden Timers für die Pumpe
+      while (millis() - startTime < 2000) {
+        // Warte 2 Sekunden, während die Pumpe läuft (nicht blockierend)
+      }
+      
       digitalWrite(relayPinOne, LOW);
-      pumpRunningTime += (millis() - startTime);
+      Serial.println("Pumpe ausschalten"); 
+      pumpRunningTime += (millis() - startTime); // Laufzeit hinzufügen
+
+      unsigned long waitStartTime = millis();
+      while (millis() - waitStartTime < 1800000) {
+ 
+      }
+
+      feuchtigkeit = bodenfeuchtigkeitMessung(); 
+      if (feuchtigkeit < 70) {
+        Serial.println("Pumpe erneut einschalten");
+        digitalWrite(relayPinOne, HIGH); 
+        startTime = millis();
+        while (millis() - startTime < 2000) {
+          // Warte 2 Sekunden, während die Pumpe läuft 
+        }
+        digitalWrite(relayPinOne, LOW);
+        Serial.println("Pumpe ausschalten"); 
+        pumpRunningTime += (millis() - startTime);
+      }
     }
   }
 
@@ -144,7 +176,9 @@ void handlePeriodicTask() {
   }
 
   if (taskRunning) {
+    Serial.println("senden");
     sendMessage();
+    Serial.println("senden");
   }
 }
  
