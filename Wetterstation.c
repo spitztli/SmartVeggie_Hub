@@ -12,7 +12,7 @@ DHT dht(DHTPIN, DHTTYPE);
 // LoRa
 const int csPin = 10;
 const int resetPin = 9;
-const int irqPin = 2;
+//const int irqPin = 2;
 
 // Sendeintervall und Sendedauer in Millisekunden
 const unsigned long taskInterval = 1800000; // 30 min Pause
@@ -22,7 +22,6 @@ const unsigned long taskDuration = 300000; // 5 min Sendezeit
 int localAddress = 6258;
 
 void setup() {
-  Serial.print("lets go");
   Serial.begin(9600);
   initializeLoRa();
   dht.begin();
