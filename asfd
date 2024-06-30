@@ -1,0 +1,18 @@
+void handlePeriodicTask() {
+  unsigned long currentMillis = millis();
+  if (taskRunning) {
+    if (currentMillis - lastTaskTime >= taskDuration) {
+      taskRunning = false;
+      Serial.println("Task stopped");
+    }
+  } else {
+    if (currentMillis - lastTaskTime >= taskInterval) {
+      taskRunning = true;
+      lastTaskTime = currentMillis;
+      Serial.println("Task started");
+    }
+  }
+  if (taskRunning) {
+    checkLoRa();
+  }
+}

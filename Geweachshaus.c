@@ -35,8 +35,8 @@ Thread* loraSendThread = new Thread();
 
 unsigned long lastTaskTime = 0;
 bool taskRunning = false;
-const unsigned long taskInterval = 900000; // 15 min
-const unsigned long taskDuration = 300000; // 5 min
+const unsigned long taskInterval = 900000; // 15 min pause 
+const unsigned long taskDuration = 300000; // 5 min Sende Zeit 
 
 // Arduino Adresse
 int localAddress = 2342;
@@ -50,13 +50,13 @@ void setup() {
   initializeLoRa();
   
   periodicTaskThread->onRun(handlePeriodicTask);
-  periodicTaskThread->setInterval(250); // Check every second
+  periodicTaskThread->setInterval(250); 
 
   pumpControlThread->onRun(steuereWasserpumpe);
-  pumpControlThread->setInterval(10000); // Check every 10 seconds
+  pumpControlThread->setInterval(10000); 
 
   loraSendThread->onRun(sendMessage);
-  loraSendThread->setInterval(taskInterval); // Send every 15 minutes
+  loraSendThread->setInterval(taskInterval); // 15 Sende Pause 
 
   controller.add(periodicTaskThread);
   controller.add(pumpControlThread);
@@ -181,4 +181,35 @@ void handlePeriodicTask() {
     Serial.println("senden");
   }
 }
+
+/*
+void steuereWasserpumpe() {
+  unsigned long currentMillis = millis();
+  
+  if (currentMillis - lastMoistureCheckTime >= moistureCheckInterval) {
+    lastMoistureCheckTime = currentMillis; // Aktualisiere die Zeit der letzten Überprüfung
+    int feuchtigkeit = bodenfeuchtigkeitMessung();
+    Serial.print("Bodenfeuchtigkeit: ");
+    Serial.print(feuchtigkeit);
+    Serial.println("%");
+    
+    while (feuchtigkeit < 70) {
+      Serial.println("Pumpe einschalten");
+      digitalWrite(relayPinOne, HIGH);
+      delay(2000); // Pumpe 2 Sekunden laufen lassen
+      digitalWrite(relayPinOne, LOW);
+      Serial.println("Pumpe ausschalten");
+      
+      pumpRunningTime += 2000;
+      
+      delay(1800000); // 30 Minuten warten
+      
+      feuchtigkeit = bodenfeuchtigkeitMessung(); // Bodenfeuchtigkeit erneut messen
+      Serial.print("Bodenfeuchtigkeit: ");
+      Serial.print(feuchtigkeit);
+      Serial.println("%");
+    }
+  }
+}
+*/
  
