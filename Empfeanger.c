@@ -10,7 +10,7 @@
 #define CS_PIN 10
 #define RESET_PIN 9
 #define GROW_STATION_ADDRESS 38
-#define WEATHER_STATION_ADDRESS 114
+#define NEW_STATION 114
 #define INTERRUPT_PIN 3
 #define INTERRUPT_LCD_INIT_PIN 18
 #define LCD_ADDRESS 0x27
@@ -106,7 +106,7 @@ void checkLoRa() {
         Serial.print(" C, Luftfeuchtigkeit: ");
         Serial.print(measurementData[0][2]);
         Serial.println("%");
-      } else if (receivedAddress == WEATHER_STATION_ADDRESS) {
+      } else if (receivedAddress == NEW_STATION) {
         measurementData[1][0] = LoRa.read();
         measurementData[1][1] = LoRa.read();
         measurementData[1][2] = LoRa.read();
