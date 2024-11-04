@@ -17,6 +17,9 @@ Datenzentrale: Der Arduino Uno Empfänger sammelt die Daten von beiden Sendern m
 Technische Details
 
 Mikrocontroller: Arduino Uno
+
 Kommunikation: LoRa-Module
+
 Anzeige: LCD-Display
+
 Sensoren: Temperatur, Luftfeuchtigkeit, Bodenfeuchtigkeit
